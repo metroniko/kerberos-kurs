@@ -1,4 +1,4 @@
-package com.example.demo.service;
+package com.example.server.service;
 
 import org.apache.commons.codec.digest.HmacUtils;
 import org.springframework.stereotype.Service;
@@ -21,6 +21,14 @@ public class EncryptService {
     public static String hmacSHA256Algorithm = "HmacSHA1";
     private static final String ALGORITHM = "AES";
     private static final String TRANSFORMATION = "AES/CBC/PKCS5Padding";
+
+    //этот ключ находится на сервере
+    public static final String SERVER_KEY_Ks = "serverKey______s";
+
+    public EncryptService() {
+        ByteBuffer buffer = ByteBuffer.allocate(15);
+    }
+
 
     public byte[] hashData(String key, String password) {
         return new HmacUtils(hmacSHA256Algorithm, key).hmac(password);
@@ -49,8 +57,17 @@ public class EncryptService {
         return new Date(buffer.getLong());
     }
 
-    public byte[] decryptRequestFromKdc(byte[] input, byte[] key,
-                                        IvParameterSpec iv) throws NoSuchPaddingException, NoSuchAlgorithmException,
+    public byte[] encryptString(byte[] key, IvParameterSpec iv, byte[] object) throws NoSuchPaddingException, NoSuchAlgorithmException,
+            InvalidAlgorithmParameterException, InvalidKeyException, IllegalBlockSizeException, IOException, BadPaddingException {
+        SecretKeySpec aes = new SecretKeySpec(key, ALGORITHM);
+        Cipher cipher = Cipher.getInstance(TRANSFORMATION);
+        cipher.init(Cipher.ENCRYPT_MODE, aes, iv);
+        byte[] cipherText = cipher.doFinal(object);
+        return cipherText;
+    }
+
+    public byte[] decryptString(byte[] input, byte[] key,
+                                IvParameterSpec iv) throws NoSuchPaddingException, NoSuchAlgorithmException,
             InvalidAlgorithmParameterException, InvalidKeyException,
             BadPaddingException, IllegalBlockSizeException {
         SecretKeySpec aes = new SecretKeySpec(key, ALGORITHM);
@@ -58,13 +75,5 @@ public class EncryptService {
         cipher.init(Cipher.DECRYPT_MODE, aes, iv);
         byte[] plainText = cipher.doFinal(input);
         return plainText;
-    }
-    public byte[] encryptString(byte[] key, IvParameterSpec iv, byte[] object) throws NoSuchPaddingException, NoSuchAlgorithmException,
-            InvalidAlgorithmParameterException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
-        SecretKeySpec aes = new SecretKeySpec(key, ALGORITHM);
-        Cipher cipher = Cipher.getInstance(TRANSFORMATION);
-        cipher.init(Cipher.ENCRYPT_MODE, aes, iv);
-        byte[] cipherText = cipher.doFinal(object);
-        return cipherText;
     }
 }

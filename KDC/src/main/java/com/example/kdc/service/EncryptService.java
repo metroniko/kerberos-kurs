@@ -11,11 +11,9 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SealedObject;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
-import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
@@ -29,13 +27,18 @@ public class EncryptService {
     private static final String ALGORITHM = "AES";
     private static final String TRANSFORMATION = "AES/CBC/PKCS5Padding";
 
-    private static final String SESSION_KEY = "sessionKey";
+    public static final String SESSION_KEY = "sessionKeyK____S";
+
+    //этот ключ находится на сервере
+    public static final String SERVER_KEY_Ks = "serverKey______s";
+
+    public static final String CLIENT_SERVER_KEY = "clientServerKeyS";
 
     public EncryptService() {
         ByteBuffer buffer = ByteBuffer.allocate(15);
     }
 
-    private static final String MASTER_KEY = "masterKeyMasterK";
+    public static final String MASTER_KEY = "masterKeyMasterK";
 
     public byte[] hashData(String key, String password) {
         return new HmacUtils(hmacSHA256Algorithm, key).hmac(password);
@@ -87,5 +90,16 @@ public class EncryptService {
         //encrypt by key from client (hashed password)
         byte[] secondSealedPart = encryptString(hashedKey, iv, secondBytes);
         return new TGT(firstSealedPart, secondSealedPart);
+    }
+
+    public byte[] decryptString(byte[] input, byte[] key,
+                               IvParameterSpec iv) throws NoSuchPaddingException, NoSuchAlgorithmException,
+            InvalidAlgorithmParameterException, InvalidKeyException,
+            BadPaddingException, IllegalBlockSizeException {
+        SecretKeySpec aes = new SecretKeySpec(key, ALGORITHM);
+        Cipher cipher = Cipher.getInstance(TRANSFORMATION);
+        cipher.init(Cipher.DECRYPT_MODE, aes, iv);
+        byte[] plainText = cipher.doFinal(input);
+        return plainText;
     }
 }

@@ -1,9 +1,9 @@
 package com.example.kdc.client;
 
-import com.example.kdc.model.AuthenticationRequestToKDC;
-import com.example.kdc.model.TGT;
+import com.example.kdc.model.*;
 import com.example.kdc.service.EncryptService;
 import com.example.kdc.storage.ClientStorage;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,22 +20,26 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Objects;
+
+import static com.example.kdc.service.EncryptService.*;
 
 @RestController
 public class KDCController {
     private EncryptService eService;
     private ClientStorage storage;
+    private IvParameterSpec iv;
 
     public KDCController(EncryptService encryptService, ClientStorage storage) {
         this.eService = encryptService;
         this.storage = storage;
+        this.iv = new IvParameterSpec("qwertyuiopasdfgh".getBytes(StandardCharsets.UTF_8));
     }
 
     @PostMapping(path = "/kdc/auth", consumes = MediaType.APPLICATION_JSON_VALUE)
     private TGT authClient(@RequestBody AuthenticationRequestToKDC requestFromClient) throws InvalidAlgorithmParameterException,
             IllegalBlockSizeException, NoSuchPaddingException,
             NoSuchAlgorithmException, BadPaddingException, InvalidKeyException, IOException {
-        IvParameterSpec iv = new IvParameterSpec("qwertyuiopasdfgh".getBytes(StandardCharsets.UTF_8));
         String password = storage.getLoginPasswordMap().get(requestFromClient.getLogin());
         String key = storage.getLoginKeyMap().get(requestFromClient.getLogin());
         byte[] hashedKey = eService.hashData(key, password);
@@ -43,5 +47,27 @@ public class KDCController {
         Date date = eService.decryptDate(requestFromClient.getEncryptedKey(), Arrays.copyOfRange(hashedKey, 0, 16), iv);
         TGT tgt = eService.buildTGT(requestFromClient.getLogin(), Arrays.copyOfRange(hashedKey, 0, 16), iv);
         return tgt;
+    }
+
+    @PostMapping(path = "/kdc/author", consumes = MediaType.APPLICATION_JSON_VALUE)
+    private TGSc getToken(@RequestBody AuthorisationRequestToKDC authorisationRequestToKDC) throws InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException, IOException {
+        byte[] firstTgtPart = eService.decryptString(authorisationRequestToKDC.getTgt().getEncryptedByMasterKeyFields(), MASTER_KEY.getBytes(StandardCharsets.UTF_8), iv);
+        ObjectMapper objectMapper = new ObjectMapper();
+        FirstTGTPart firstTGTPart = objectMapper.readValue(firstTgtPart, FirstTGTPart.class);
+        String sessionKey = firstTGTPart.getSessionKey();
+        // про
+        boolean b = Objects.equals(sessionKey, SESSION_KEY);
+        TGS tgs = new TGS("login", "server", System.currentTimeMillis(), System.currentTimeMillis(), CLIENT_SERVER_KEY);
+
+        //buildResponse
+        byte[] tgs_b = objectMapper.writeValueAsBytes(tgs);
+
+        byte[] encryptedTGS = eService.encryptString(SERVER_KEY_Ks.getBytes(StandardCharsets.UTF_8), iv, tgs_b);
+        TGSs tgSs = new TGSs(encryptedTGS);
+        TGScPart tgScPart = new TGScPart(tgs, tgSs);
+        byte[] tgScPart_b = objectMapper.writeValueAsBytes(tgScPart);
+        byte[] tgSc_b = eService.encryptString(sessionKey.getBytes(StandardCharsets.UTF_8), iv, tgScPart_b);
+        TGSc tgSc = new TGSc(tgSc_b);
+        return tgSc;
     }
 }

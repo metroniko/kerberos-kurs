@@ -1,9 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.client.Client;
-import com.example.demo.model.AuthenticationRequestToKDC;
-import com.example.demo.model.SecondTGTPart;
-import com.example.demo.model.TGT;
+import com.example.demo.model.*;
 import com.example.demo.service.EncryptService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -41,9 +39,17 @@ public class Controller {
         AuthenticationRequestToKDC toKDC = new AuthenticationRequestToKDC("login", "domain", clientAuth);
         TGT tgt = client.authenticateToKdc(toKDC);
         ObjectMapper objectMapper = new ObjectMapper();
-        byte[] bytes = eService.decryptRequestFromKdc(tgt.getEncryptedByHashedPassword(), Arrays.copyOfRange(hashedKey, 0, 16), iv);
-        SecondTGTPart secondTGTPart = objectMapper.readValue(bytes, SecondTGTPart.class);
+        byte[] sessionKeyBytes = eService.decryptRequestFromKdc(tgt.getEncryptedByHashedPassword(), Arrays.copyOfRange(hashedKey, 0, 16), iv);
+        SecondTGTPart secondTGTPart = objectMapper.readValue(sessionKeyBytes, SecondTGTPart.class);
         String sessionKey = secondTGTPart.getSessionKey();
+
+        byte[] secondPart = eService.encryptDate(System.currentTimeMillis(), sessionKey.getBytes(StandardCharsets.UTF_8), iv);
+        TGSc tgSc = client.authorisationToKDC(new AuthorisationRequestToKDC(tgt, secondPart));
+        byte[] tgScPartByte = eService.decryptRequestFromKdc(tgSc.getTgSc_b(), sessionKey.getBytes(StandardCharsets.UTF_8), iv);
+        TGScPart tgScPart = objectMapper.readValue(tgScPartByte, TGScPart.class);
+        byte[] timestamp = eService.encryptDate(System.currentTimeMillis(), tgScPart.getTGS().getK_cs().getBytes(StandardCharsets.UTF_8), iv);
+        RequestToServer requestToServer = new RequestToServer(timestamp, tgScPart.getTGSs().getE_sk_TGS());
+        client.authRequestToServer(requestToServer);
         return toKDC;
     }
 }

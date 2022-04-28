@@ -4,13 +4,15 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.io.Serializable;
+import java.util.Date;
 
-@Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class FirstTGTPart implements Serializable {
-    private String sessionKey;
+@Data
+public class TGS {
     private String login;
+    private String server;
+    private long t;
     private long ttl;
+    private String K_cs;
 }
