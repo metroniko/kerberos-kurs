@@ -59,7 +59,7 @@ public class EncryptService {
         byte[] plainText = cipher.doFinal(input);
         return plainText;
     }
-    public byte[] encryptString(byte[] key, IvParameterSpec iv, byte[] object) throws NoSuchPaddingException, NoSuchAlgorithmException,
+    public byte[] encryptString(byte[] object, byte[] key, IvParameterSpec iv) throws NoSuchPaddingException, NoSuchAlgorithmException,
             InvalidAlgorithmParameterException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
         SecretKeySpec aes = new SecretKeySpec(key, ALGORITHM);
         Cipher cipher = Cipher.getInstance(TRANSFORMATION);

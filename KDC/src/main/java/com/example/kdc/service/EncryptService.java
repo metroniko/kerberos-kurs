@@ -19,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.Date;
 
 @Service
@@ -30,7 +31,7 @@ public class EncryptService {
     public static final String SESSION_KEY = "sessionKeyK____S";
 
     //этот ключ находится на сервере
-    public static final String SERVER_KEY_Ks = "serverKey______s";
+    public static final String SERVER_KEY_SK = "serverKey______s";
 
     public static final String CLIENT_SERVER_KEY = "clientServerKeyS";
 
@@ -82,13 +83,17 @@ public class EncryptService {
         ObjectMapper objectMapper = new ObjectMapper();
         long time = System.currentTimeMillis();
         FirstTGTPart firstTGTPart = new FirstTGTPart(SESSION_KEY, login, time);
+        System.out.println("часть TGT, зашифрованная мастер ключом KDC: " + firstTGTPart);
         SecondTGTPart secondTGTPart = new SecondTGTPart(SESSION_KEY, time);
+        System.out.println("часть TGT, зашифрованная захешированным паролем клиента: " + secondTGTPart);
         byte[] firstBytes = objectMapper.writeValueAsBytes(firstTGTPart);
         byte[] secondBytes = objectMapper.writeValueAsBytes(secondTGTPart);
         //encrypt by masterKey
         byte[] firstSealedPart = encryptString(MASTER_KEY.getBytes(StandardCharsets.UTF_8), iv, firstBytes);
+        System.out.println("1 часть TGT, зашифрованная: " + Arrays.toString(firstSealedPart));
         //encrypt by key from client (hashed password)
         byte[] secondSealedPart = encryptString(hashedKey, iv, secondBytes);
+        System.out.println("2 часть TGT, зашифрованная: " + Arrays.toString(secondSealedPart));
         return new TGT(firstSealedPart, secondSealedPart);
     }
 

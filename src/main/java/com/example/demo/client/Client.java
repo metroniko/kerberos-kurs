@@ -28,4 +28,10 @@ public class Client {
         String fooResourceUrl = "http://localhost:8083/from";
         restTemplate.postForObject(fooResourceUrl, request, Object.class);
     }
+
+    public void message(Message message) {
+        HttpEntity<Message> request = new HttpEntity<>(message);
+        String fooResourceUrl = "http://localhost:8083/message";
+        restTemplate.postForObject(fooResourceUrl, request, Object.class);
+    }
 }
